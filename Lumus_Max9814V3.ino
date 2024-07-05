@@ -44,13 +44,13 @@ char etiqueta[32];
  * @param status Estado del envío.
  */
 void enviarCallback(const uint8_t* mac, esp_now_send_status_t status) {
-    Serial.print("Envio a: ");
+    Serial.print("Envio a: "); // Imprime mensaje de inicio del envío
     for (int i = 0; i < 6; i++) {
-        Serial.print(mac[i], HEX);
-        if (i < 5) Serial.print(":");
+        Serial.print(mac[i], HEX);// Imprime cada byte de la dirección MAC en formato
+        if (i < 5) Serial.print(":");// Agrega ":" entre los bytes, excepto en el último
     }
-    Serial.print(" estado: ");
-    Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Éxito" : "Fallo");
+    Serial.print(" estado: ");// Imprime mensaje de estado
+    Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Éxito" : "Fallo");// Imprime si el envío fue exitoso o falló
 }
 
 /**
@@ -62,22 +62,38 @@ void adc_init() {
     adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_12);
 
     // Configuración del I2S
-    i2s_config_t i2s_config = {
-        .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX | I2S_MODE_ADC_BUILT_IN),
-        .sample_rate = 16000,  // Tasa de muestreo de 16 kHz
-        .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
-        .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,
-        .communication_format = I2S_COMM_FORMAT_I2S_MSB,
-        .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
-        .dma_buf_count = 4,
-        .dma_buf_len = 1024,
-        .use_apll = false
-    };
-
+i2s_config_t i2s_config = {
+    .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX | I2S_MODE_ADC_BUILT_IN), // Modo maestro, recepción y ADC integrado
+    .sample_rate = 16000,  // Tasa de muestreo de 16 kHz
+    .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT, // 16 bits por muestra
+    .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT, // Solo canal izquierdo
+    .communication_format = I2S_COMM_FORMAT_I2S_MSB, // Formato de comunicación MSB
+    .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1, // Asigna la bandera de interrupción de nivel 1
+    .dma_buf_count = 4, // Cantidad de buffers DMA
+    .dma_buf_len = 1024, // Longitud del buffer DMA
+    .use_apll = false // No utilizar APLL
+};
+    // Configurar el ADC1 en el canal 6 (GPIO34)
+    /* @note  ADC1: 8 channels: GPIO32 - GPIO39ADC1 channel GPIO pin  ADC2 channel  GPIO pin
+     *        ADC2: 10 channels: GPIO0, GPIO2, GPIO4, GPIO12 - GPIO15, GOIO25 - GPIO27
+     *        ADC1_CHANNEL_0  GPIO36  ADC2_CHANNEL_0  GPIO4
+     *        ADC1_CHANNEL_1  GPIO37  ADC2_CHANNEL_1  GPIO0
+     *        ADC1_CHANNEL_2  GPIO38  ADC2_CHANNEL_2  GPIO2
+     *        ADC1_CHANNEL_3  GPIO39  ADC2_CHANNEL_3  GPIO15
+     *        ADC1_CHANNEL_4  GPIO32  ADC2_CHANNEL_4  GPIO13
+     *        ADC1_CHANNEL_5  GPIO33  ADC2_CHANNEL_5  GPIO12
+     *        ADC1_CHANNEL_6  GPIO34  ADC2_CHANNEL_6  GPIO14
+     *        ADC1_CHANNEL_7  GPIO35  ADC2_CHANNEL_7  GPIO27
+     *        ADC2_CHANNEL_8  GPIO25
+     *        ADC2_CHANNEL_9  GPIO26
+     *
+     *        Dado que el módulo ADC2 también es utilizado por el Wi-Fi, solo uno de ellos podría obtener la prioridad al usarlos simultáneamente. 
+     *        Esto significa que la función adc2_get_raw() podría quedar bloqueada hasta que el Wi-Fi deje de usarse, y viceversa.
+    */
     // Configurar I2S
-    i2s_driver_install(I2S_NUM_0, &i2s_config, 0, NULL);
-    i2s_set_adc_mode(ADC_UNIT_1, ADC1_CHANNEL_6);
-    i2s_adc_enable(I2S_NUM_0);
+  i2s_driver_install(I2S_NUM_0, &i2s_config, 0, NULL); // Instala el controlador I2S
+  i2s_set_adc_mode(ADC_UNIT_1, ADC1_CHANNEL_6); // Establece el modo ADC para el canal 6
+  i2s_adc_enable(I2S_NUM_0); // Habilita el ADC para el I2S
 }
 
 /**
@@ -114,23 +130,23 @@ void setup() {
     }
 
     // Imprimir resumen de configuraciones de inferencia
-    ei_printf("Configuraciones de inferencia:\n");
-    ei_printf("\tIntervalo: ");
-    ei_printf_float((float)EI_CLASSIFIER_INTERVAL_MS);
-    ei_printf(" ms.\n");
-    ei_printf("\tTamaño del cuadro: %d\n", EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE);
-    ei_printf("\tDuración de la muestra: %d ms.\n", EI_CLASSIFIER_RAW_SAMPLE_COUNT / 16);
-    ei_printf("\tNúmero de clases: %d\n", sizeof(ei_classifier_inferencing_categories) / sizeof(ei_classifier_inferencing_categories[0]));
+        ei_printf("Configuraciones de inferencia:\n"); // Imprime el encabezado para mostrar las configuraciones de inferencia
+        ei_printf("\tIntervalo: "); // Imprime el texto para el intervalo
+        ei_printf_float((float)EI_CLASSIFIER_INTERVAL_MS); // Imprime el valor del intervalo en milisegundos
+        ei_printf(" ms.\n"); // Imprime la unidad de medida del intervalo
+        ei_printf("\tTamaño del cuadro: %d\n", EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE); // Imprime el tamaño del cuadro de entrada
+        ei_printf("\tDuración de la muestra: %d ms.\n", EI_CLASSIFIER_RAW_SAMPLE_COUNT / 16); // Imprime la duración de la muestra en milisegundos
+        ei_printf("\tNúmero de clases: %d\n", sizeof(ei_classifier_inferencing_categories) / sizeof(ei_classifier_inferencing_categories[0])); // Imprime el número de clases para la inferencia
 
-    ei_printf("\nIniciando inferencia continua en 2 segundos...\n");
-    ei_sleep(2000);
-
+        ei_printf("\nIniciando inferencia continua en 2 segundos...\n"); // Imprime un mensaje indicando el inicio de la inferencia continua
+        ei_sleep(2000); // Espera 2 segundos antes de continuar con la ejecución
     // Iniciar la captura de muestras de audio
+   // Comprueba si se puede iniciar la inferencia del micrófono con el tamaño de muestra crudo definido
     if (microphone_inference_start(EI_CLASSIFIER_RAW_SAMPLE_COUNT) == false) {
+        // Imprime un mensaje de error si no se puede asignar el búfer de audio con el tamaño especificado
         ei_printf("ERROR: No se pudo asignar el búfer de audio (tamaño %d), esto podría deberse a la longitud de la ventana de su modelo\r\n", EI_CLASSIFIER_RAW_SAMPLE_COUNT);
         return;
     }
-
     ei_printf("Grabando...\n");
 }
 
@@ -152,56 +168,56 @@ void loop() {
         return;
     }
 
-    signal_t signal;
-    signal.total_length = EI_CLASSIFIER_RAW_SAMPLE_COUNT;
-    signal.get_data = &microphone_audio_signal_get_data;
+    signal_t signal; // Definir una estructura para almacenar la señal
+    signal.total_length = EI_CLASSIFIER_RAW_SAMPLE_COUNT; // Establecer la longitud total de la señal
+    signal.get_data = &microphone_audio_signal_get_data; // Obtener los datos de la señal del micrófono
 
-    ei_impulse_result_t result = { 0 };
+    ei_impulse_result_t result = { 0 }; // Inicializar la estructura de resultados en cero
 
     // Ejecutar el clasificador de Edge Impulse
-    EI_IMPULSE_ERROR r = run_classifier(&signal, &result, debug_nn);
+    EI_IMPULSE_ERROR r = run_classifier(&signal, &result, debug_nn); // Llamar a la función para ejecutar el clasificador
     if (r != EI_IMPULSE_OK) {
         ei_printf("ERROR: Falló la ejecución del clasificador (%d)\n", r); // Imprimir mensaje de error si la ejecución del clasificador falla
-        return;
+        return; // Salir de la función si hay un error
     }
 
     // Imprimir las predicciones del clasificador
-    ei_printf("Predicciones ");
-    ei_printf("(DSP: %d ms., Clasificación: %d ms., Anomalía: %d ms.)",
+    ei_printf("Predicciones "); // Imprime el encabezado de las predicciones
+    ei_printf("(DSP: %d ms., Clasificación: %d ms., Anomalía: %d ms.)", // Imprime los tiempos de procesamiento
         result.timing.dsp, result.timing.classification, result.timing.anomaly);
-    ei_printf(": \n");
+    ei_printf(": \n"); // Imprime un salto de línea
 
     for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) {
-        ei_printf("    %s: ", result.classification[ix].label);
-        ei_printf_float(result.classification[ix].value);
-        ei_printf("\n");
+        ei_printf("    %s: ", result.classification[ix].label); // Imprime la etiqueta de la clasificación
+        ei_printf_float(result.classification[ix].value); // Imprime el valor de la clasificación
+        ei_printf("\n"); // Imprime un salto de línea
     }
 
 #if EI_CLASSIFIER_HAS_ANOMALY == 1
-    ei_printf("    puntaje de anomalía: ");
-    ei_printf_float(result.anomaly);
-    ei_printf("\n");
+    ei_printf("    puntaje de anomalía: "); // Imprime el puntaje de anomalía
+    ei_printf_float(result.anomaly); // Imprime el valor de la anomalía
+    ei_printf("\n"); // Imprime un salto de línea
 #endif
-
     digitalWrite(33, LOW);   // Desactivar el pin 33 (GPIO33)
 
     // Activa el pin 33 si la inferencia es mayor que 0.40000
-    if (result.classification[0].value > 0.40000) {
-        ei_printf("    %s: ", result.classification[0].label);
-        ei_printf_float(result.classification[0].value);
+    if (result.classification[0].value > 0.40000) {  // Comprueba si el valor de clasificación es mayor a 0.4
+    ei_printf("    %s: ", result.classification[0].label);  // Imprime la etiqueta de la clasificación
+    ei_printf_float(result.classification[0].value);  // Imprime el valor de la clasificación
+}
         digitalWrite(33, HIGH);  // Activar el pin 33 (GPIO33)
 
         // Preparar la etiqueta para enviar
-        snprintf(etiqueta, sizeof(etiqueta), "%s: %.2f", result.classification[0].label, result.classification[0].value);
+       
+       snprintf(etiqueta, sizeof(etiqueta), "%s: %.2f", result.classification[0].label, result.classification[0].value);// Formato de la etiqueta con la clasificación y valor
 
-        // Enviar la etiqueta al ESP8266
-        esp_err_t resultado = esp_now_send(direccionMACReceptor, (uint8_t *)etiqueta, strlen(etiqueta));
-        if (resultado == ESP_OK) {
-            Serial.println("Etiqueta enviada con éxito");
-        } else {
-            Serial.println("Error al enviar la etiqueta");
-        }
-    }
+       // Envío de la etiqueta a través de ESP-NOW
+       esp_err_t resultado = esp_now_send(direccionMACReceptor, (uint8_t *)etiqueta, strlen(etiqueta));
+       if (resultado == ESP_OK) {
+          Serial.println("Etiqueta enviada con éxito"); // Impresión en el puerto serie si la etiqueta se envió con éxito
+       } else {
+          Serial.println("Error al enviar la etiqueta");// Impresión en el puerto serie si hubo un error al enviar la etiqueta
+       }
 
     // Resetear el watchdog en cada ciclo de loop
     vTaskDelay(pdMS_TO_TICKS(500));
@@ -267,17 +283,21 @@ static void capture_samples(void* arg) {
  * @return Verdadero si la inicialización fue exitosa, falso de lo contrario
  */
 static bool microphone_inference_start(uint32_t n_samples) {
+    // Reservar memoria para el búfer de muestras de audio
     inference.buffer = (int16_t *)malloc(n_samples * sizeof(int16_t));
 
+    // Comprobar si la asignación de memoria fue exitosa
     if(inference.buffer == NULL) {
-        return false;
+        return false; // Devolver falso si la asignación falló
     }
 
-    inference.buf_count  = 0;
-    inference.n_samples  = n_samples;
-    inference.buf_ready  = 0;
+    inference.buf_count  = 0; // Inicializar el contador de búfer
+    inference.n_samples  = n_samples; // Establecer el número de muestras
+    inference.buf_ready  = 0; // Inicializar el indicador de búfer listo
 
-    record_status = true;
+    record_status = true; // Establecer el estado de grabación en verdadero
+}
+
 
     // Crear tarea para capturar muestras de audio
     xTaskCreate(capture_samples, "CapturarMuestras", 1024 * 32, (void*)sample_buffer_size, 10, NULL);
@@ -291,14 +311,14 @@ static bool microphone_inference_start(uint32_t n_samples) {
  * @return Verdadero cuando finaliza
  */
 static bool microphone_inference_record(void) {
-    bool ret = true;
+    bool ret = true; // Variable para almacenar el valor de retorno
 
-    while (inference.buf_ready == 0) {
-        delay(5);
+    while (inference.buf_ready == 0) { // Bucle mientras el búfer de inferencia no esté listo
+        delay(5); // Esperar 5 milisegundos
     }
 
-    inference.buf_ready = 0;
-    return ret;
+    inference.buf_ready = 0; // Reiniciar el indicador de búfer listo
+    return ret; // Devolver el valor de retorno
 }
 
 /**
@@ -311,16 +331,17 @@ static bool microphone_inference_record(void) {
   La función microphone_audio_signal_get_data toma tres parámetros: offset (desplazamiento inicial en el buffer de entrada), length (longitud de datos a procesar) y out_ptr (puntero al buffer de salida donde se almacenarán los datos convertidos).
  */
 static int microphone_audio_signal_get_data(size_t offset, size_t length, float *out_ptr) {
+    // Convierte los datos de tipo int16 a float
     numpy::int16_to_float(&inference.buffer[offset], out_ptr, length);
-    return 0;
+    return 0; // Devuelve 0 al finalizar la función
 }
 
 /**
  * @brief Detiene la captura de audio y libera los buffers
  */
 static void microphone_inference_end(void) {
-    record_status = false;
-    ei_free(inference.buffer);
-    i2s_adc_disable(I2S_NUM_0);
-    i2s_driver_uninstall(I2S_NUM_0);
+    record_status = false;  // Se establece el estado de grabación como falso
+    ei_free(inference.buffer);  // Se libera la memoria utilizada por el búfer de inferencia
+    i2s_adc_disable(I2S_NUM_0);  // Se deshabilita la entrada de audio ADC
+    i2s_driver_uninstall(I2S_NUM_0);  // Se desinstala el controlador I2S
 }
